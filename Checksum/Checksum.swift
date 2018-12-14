@@ -90,9 +90,10 @@ extension Data {
     ///
     /// - Returns: *(optional)* A string with the computed checksum.
     ///
-    public func checksum(algorithm: DigestAlgorithm, chunkSize: Int = Defaults.chunkSize) -> String? {
+    public func checksum(algorithm: DigestAlgorithm, chunkSize: Int = Defaults.chunkSize, progress: ProgressHandler? = nil) -> String? {
         let cc = CCWrapper(algorithm: algorithm)
         var bytesLeft = count
+        let totalBytes = self.count
 
         withUnsafeBytes { (u8Ptr: UnsafePointer<UInt8>) in
             var uMutablePtr = UnsafeMutablePointer(mutating: u8Ptr)
@@ -104,9 +105,12 @@ extension Data {
 
                 bytesLeft -= bytesToCopy
                 uMutablePtr += bytesToCopy
+
+                let actualBytesLeft = bytesLeft
+                progress?(totalBytes - actualBytesLeft, totalBytes)
             }
         }
-        
+
         cc.final()
         return cc.hexString()
     }
@@ -142,18 +146,13 @@ extension Data {
                     uMutablePtr += bytesToCopy
 
                     let actualBytesLeft = bytesLeft
-
-                    DispatchQueue.main.async {
-                        progress?(totalBytes - actualBytesLeft, totalBytes)
-                    }
+                    progress?(totalBytes - actualBytesLeft, totalBytes)
                 }
             }
 
             cc.final()
 
-            DispatchQueue.main.async {
-                completion(cc.hexString())
-            }
+            completion(cc.hexString())
         }
     }
 }
@@ -192,10 +191,8 @@ private func collectionChecksum(for collection: [Checksumable],
             checksumDict[item.hashValue] = checksum
 
             if checksumDict.count == total {
-                DispatchQueue.main.async {
-                    let checksums = collection.compactMap { checksumDict[$0.hashValue] }
-                    completion(checksums)
-                }
+                let checksums = collection.compactMap { checksumDict[$0.hashValue] }
+                completion(checksums)
             }
         }
     }

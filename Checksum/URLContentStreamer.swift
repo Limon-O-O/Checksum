@@ -42,18 +42,14 @@ final internal class URLContentStreamer {
                     cc.update(data: uMutablePtr, length: CC_LONG(data.count))
                     uMutablePtr += data.count
 
-                    DispatchQueue.main.async {
-                        let totalBytes = self.source.size
-                        progress?(data.count, totalBytes)
-                    }
+                    let totalBytes = self.source.size
+                    progress?(data.count, totalBytes)
                 }
             }
 
             cc.final()
 
-            DispatchQueue.main.async {
-                completion(cc.hexString())
-            }
+            completion(cc.hexString())
         }
     }
 }
